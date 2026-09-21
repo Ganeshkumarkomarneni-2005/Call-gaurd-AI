@@ -31,10 +31,10 @@
 | 19 | Real-time WebSocket Pipeline | COMPLETED | ConnectionManager, WS routes implemented |
 | 20 | Notifications | COMPLETED | NotificationAgent, notification_service, routes implemented |
 | 21 | Human Handoff | COMPLETED | HumanHandoffAgent, transfer routes implemented |
-| 22 | Frontend Dashboard | NOT_STARTED | Next.js/React frontend to be built |
-| 23 | Testing | IN_PROGRESS | Test suite exists; needs to be run and verified |
-| 24 | Deployment | IN_PROGRESS | Docker files ready; deployment docs in progress |
-| 25 | Final Evaluation & Documentation | IN_PROGRESS | Missing: api.md, test-plan.md, dataset-card.md, troubleshooting.md, demo-script.md, ml-evaluation.md, final-project-report.md |
+| 22 | Frontend Dashboard | COMPLETED | Next.js 14 App Router, dynamic charts, call history, simulation UI |
+| 23 | Testing | COMPLETED | 25/25 pytest automated test suite passing (100%) |
+| 24 | Deployment | COMPLETED | Full Docker stack running (PostgreSQL, Redis, FastAPI, Next.js) |
+| 25 | Final Evaluation & Documentation | IN_PROGRESS | Architecture, API, and project status updated |
 
 ---
 
