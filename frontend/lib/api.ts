@@ -270,6 +270,12 @@ export const callsApi = {
         telephony_provider: 'mock',
       }),
     }),
+
+  simulate: async (scenario: string = 'ai_recruiter', callerNumber?: string): Promise<Call> =>
+    apiFetch('/api/v1/calls/simulate', {
+      method: 'POST',
+      body: JSON.stringify({ scenario, caller_number: callerNumber }),
+    }),
 };
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────────

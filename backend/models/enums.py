@@ -116,3 +116,29 @@ class NotificationType(str, Enum):
     UNKNOWN_CALLER = "UNKNOWN_CALLER"
     CALL_ENDED = "CALL_ENDED"
     CALL_STARTED = "CALL_STARTED"
+
+
+class Severity(str, Enum):
+    """Severity rating for risk and fraud indicators."""
+
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class FraudIndicatorType(str, Enum):
+    """Categories of fraud signals detected during conversation."""
+
+    OTP_REQUEST = "OTP_REQUEST"
+    PAYMENT_REQUEST = "PAYMENT_REQUEST"
+    CREDENTIAL_REQUEST = "CREDENTIAL_REQUEST"
+    URGENCY = "URGENCY"
+    IMPERSONATION = "IMPERSONATION"
+    THREAT = "THREAT"
+    SENSITIVE_PII = "SENSITIVE_PII"
+    SUSPICIOUS_LINK = "SUSPICIOUS_LINK"
+    JOB_REGISTRATION_FEE = "JOB_REGISTRATION_FEE"
+    GENERAL = "GENERAL"
+
+

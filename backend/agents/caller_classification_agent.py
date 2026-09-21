@@ -27,8 +27,9 @@ from backend.schemas.analysis import CallerClassificationResult, ClassificationI
 # ---------------------------------------------------------------------------
 
 _AI_SELF_ID_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"\b(i am|i'm)\s+(an?\s+)?(ai|bot|automated|virtual assistant|robot|machine)\b", re.I),
-    re.compile(r"\b(this is|speaking with)\s+(an?\s+)?(automated|ai|virtual)\b", re.I),
+    re.compile(r"\b(i am|i'm|this is)(?:\s+\w+[\,\.]?)?\s+(an?\s+)?(ai|bot|automated|virtual assistant|recruitment assistant|voice assistant|robot|machine)\b", re.I),
+    re.compile(r"\b(this is|speaking with)\s+(an?\s+)?(automated|ai|virtual assistant|voice assistant|bot)\b", re.I),
+    re.compile(r"\b(automated\s+recruitment\s+assistant|automated\s+assistant|ai\s+assistant)\b", re.I),
     re.compile(r"\bautomatic(ally)?\s+(calling|dialling|speaking)\b", re.I),
     re.compile(r"\bpowered by (ai|machine learning|artificial intelligence)\b", re.I),
 ]

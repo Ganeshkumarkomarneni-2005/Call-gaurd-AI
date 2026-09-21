@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +112,18 @@ class CallAnalysisResponse(BaseModel):
     decision_confidence: float
     analysis_latency_ms: Optional[int] = None
     created_at: datetime
+
+    @field_validator("risk_indicators", mode="before")
+    @classmethod
+    def parse_risk_indicators(cls, v: Any) -> List[str]:
+        if isinstance(v, str):
+            try:
+                import json
+                parsed = json.loads(v)
+                return parsed if isinstance(parsed, list) else [str(parsed)]
+            except Exception:
+                return [v] if v else []
+        return v or []
 
     model_config = {"from_attributes": True}
 

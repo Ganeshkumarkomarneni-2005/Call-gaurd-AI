@@ -141,7 +141,16 @@ function NotificationsPanel({ notifications }: { notifications: Notification[] }
 
 // ─── Demo Simulator ───────────────────────────────────────────────────────────
 
+const SIMULATION_SCENARIOS = [
+  { id: 'ai_recruiter', label: '🤖 AI Recruiter (ABC Tech - Data Analyst)', caller: '+919876543210' },
+  { id: 'human_recruiter', label: '👤 Human Recruiter (Acme HR - Cloud Eng)', caller: '+919812345678' },
+  { id: 'recruitment_fraud', label: '⚠️ Job Scam (Pay ₹5,000 Registration)', caller: '+919100012345' },
+  { id: 'otp_fraud', label: '🚨 Bank Scam (Threat & OTP Demand)', caller: '+919000099999' },
+  { id: 'promotional', label: '📣 Promotional Robocall (Loan Offer)', caller: '+919777788888' },
+];
+
 function DemoSimulator({ onSimulate }: { onSimulate: () => void }) {
+  const [scenario, setScenario] = useState('ai_recruiter');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -149,8 +158,9 @@ function DemoSimulator({ onSimulate }: { onSimulate: () => void }) {
     setLoading(true);
     setMessage('');
     try {
-      await callsApi.simulateIncoming('+911234567890');
-      setMessage('✅ Call simulated successfully!');
+      const selected = SIMULATION_SCENARIOS.find(s => s.id === scenario);
+      await callsApi.simulate(scenario, selected?.caller);
+      setMessage('✅ Call simulated & analyzed by 9 AI agents!');
       onSimulate();
     } catch (e) {
       setMessage(`❌ Failed: ${e instanceof Error ? e.message : 'Error'}`);
@@ -160,22 +170,45 @@ function DemoSimulator({ onSimulate }: { onSimulate: () => void }) {
   };
 
   return (
-    <div className="card bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+    <div className="card bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-md">
       <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
         <Activity className="w-4 h-4 text-blue-400" />
         Demo Call Simulator
       </h3>
-      <p className="text-xs text-slate-400 mb-4">
-        Inject a simulated incoming call to trigger real-time AI classification & analysis.
+      <p className="text-xs text-slate-400 mb-3">
+        Select a scenario to simulate an incoming call and run the complete AI analysis pipeline.
       </p>
+
+      <div className="mb-3">
+        <label className="block text-xs font-medium text-slate-300 mb-1">Scenario</label>
+        <select
+          value={scenario}
+          onChange={(e) => setScenario(e.target.value)}
+          className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          {SIMULATION_SCENARIOS.map((s) => (
+            <option key={s.id} value={s.id} className="bg-slate-900 text-white">
+              {s.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <button
         onClick={simulate}
         disabled={loading}
-        className="btn-primary w-full py-2 text-xs"
+        className="btn-primary w-full py-2 text-xs flex items-center justify-center gap-2 font-semibold"
       >
-        {loading ? 'Creating call…' : '📞 Simulate Call'}
+        {loading ? (
+          <>
+            <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Analyzing with AI agents…
+          </>
+        ) : (
+          '📞 Simulate Call'
+        )}
       </button>
-      {message && <p className="mt-2 text-xs text-slate-300">{message}</p>}
+      {message && <p className="mt-2.5 text-xs text-slate-300 font-medium">{message}</p>}
     </div>
   );
 }

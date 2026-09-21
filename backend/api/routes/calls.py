@@ -23,6 +23,8 @@ from backend.schemas.call import (
     TransferRequest,
 )
 from backend.services import call_service
+from backend.services.simulation_service import simulation_service
+from pydantic import BaseModel, Field
 
 logger: structlog.BoundLogger = structlog.get_logger(__name__)
 
@@ -30,8 +32,18 @@ router = APIRouter(prefix="/calls", tags=["calls"])
 
 
 # ---------------------------------------------------------------------------
-# Helper
+# Helper & Schemas
 # ---------------------------------------------------------------------------
+
+
+class SimulateCallPayload(BaseModel):
+    scenario: str = Field(
+        default="ai_recruiter",
+        description="Scenario key: ai_recruiter, human_recruiter, recruitment_fraud, otp_fraud, promotional",
+    )
+    caller_number: Optional[str] = Field(
+        default=None, description="Optional custom caller number"
+    )
 
 
 def _call_or_404(call) -> None:  # noqa: ANN001
@@ -41,20 +53,32 @@ def _call_or_404(call) -> None:  # noqa: ANN001
         )
 
 
-async def _trigger_ai_pipeline(call_id: str) -> None:
-    """Placeholder for the async AI analysis pipeline.
-
-    In a production deployment this would enqueue a Celery task or publish
-    to a message broker.  For now, it is a no-op coroutine that avoids
-    blocking the HTTP response.
-    """
-    logger.info("AI analysis pipeline triggered", call_id=call_id)
-    await asyncio.sleep(0)  # yield control
-
-
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/simulate",
+    response_model=CallResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Simulate a realistic call scenario with full AI analysis pipeline",
+)
+async def simulate_call(
+    payload: Optional[SimulateCallPayload] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CallResponse:
+    """Run an end-to-end simulated call and trigger all 9 AI analysis agents."""
+    scenario_key = payload.scenario if payload else "ai_recruiter"
+    custom_caller = payload.caller_number if payload else None
+    call = await simulation_service.simulate_call(
+        db,
+        scenario_key=scenario_key,
+        user_id=current_user.id,
+        custom_caller=custom_caller,
+    )
+    return CallResponse.model_validate(call)
 
 
 @router.post(
@@ -65,16 +89,37 @@ async def _trigger_ai_pipeline(call_id: str) -> None:
 )
 async def incoming_call(
     payload: IncomingCallRequest,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> CallResponse:
-    """Create a call record when a new call arrives from the telephony provider.
+    """Create a call record when a new call arrives.
 
-    The AI analysis pipeline is triggered as a background task so the
-    telephony webhook receives an immediate ``201`` response.
+    If it is a mock/simulated call, processes it immediately through the full
+    AI pipeline and associates with the registered user account.
     """
+    if payload.telephony_provider == "mock":
+        scenario_map = {
+            "+919876543210": "ai_recruiter",
+            "+919812345678": "human_recruiter",
+            "+919100012345": "recruitment_fraud",
+            "+919000099999": "otp_fraud",
+            "+919777788888": "promotional",
+        }
+        scenario = scenario_map.get(payload.caller_number, "ai_recruiter")
+        
+        from sqlalchemy import select
+        user_res = await db.execute(select(User).limit(1))
+        default_user = user_res.scalar_one_or_none()
+        user_id = default_user.id if default_user else None
+
+        call = await simulation_service.simulate_call(
+            db,
+            scenario_key=scenario,
+            user_id=user_id,
+            custom_caller=payload.caller_number,
+        )
+        return CallResponse.model_validate(call)
+
     call = await call_service.create_call(db, payload)
-    background_tasks.add_task(_trigger_ai_pipeline, str(call.id))
     logger.info("Incoming call recorded", call_id=str(call.id))
     return CallResponse.model_validate(call)
 
