@@ -142,19 +142,31 @@ export interface User {
 // ─── Token Storage ─────────────────────────────────────────────────────────────
 
 export function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('callguard_token');
+  try {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('callguard_token');
+  } catch {
+    return null;
+  }
 }
 
 export function setToken(token: string): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('callguard_token', token);
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('callguard_token', token);
+    }
+  } catch {
+    // Ignore storage write errors
   }
 }
 
 export function clearToken(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('callguard_token');
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('callguard_token');
+    }
+  } catch {
+    // Ignore storage remove errors
   }
 }
 

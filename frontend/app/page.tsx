@@ -1,15 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { dashboardApi, callsApi, notificationsApi, getToken, clearToken, type DashboardStats, type Call, type Notification } from '@/lib/api';
-import { formatRelativeTime, formatDuration, riskBadgeClass, callerTypeBadgeClass, type RiskLevel, type CallerType } from '@/lib/utils';
-import {
-  BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from 'recharts';
+import { formatRelativeTime, formatDuration } from '@/lib/utils';
 import { Phone, Shield, AlertTriangle, Users, Bot, Megaphone, Briefcase, Bell, Activity, RefreshCw, LogOut } from 'lucide-react';
 import Link from 'next/link';
+
+// Dynamically import charts with SSR disabled to prevent hydration exceptions
+const DashboardCharts = dynamic(() => import('@/components/DashboardCharts'), {
+  ssr: false,
+  loading: () => (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="card h-64 flex items-center justify-center text-slate-300 text-sm">Loading charts…</div>
+      <div className="card h-64 flex items-center justify-center text-slate-300 text-sm">Loading charts…</div>
+      <div className="card h-64 flex items-center justify-center text-slate-300 text-sm">Loading charts…</div>
+    </div>
+  ),
+});
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
@@ -35,7 +44,7 @@ function StatCard({
 // ─── Recent Calls Table ───────────────────────────────────────────────────────
 
 function RecentCallsTable({ calls }: { calls: Call[] }) {
-  if (calls.length === 0) {
+  if (!calls || calls.length === 0) {
     return (
       <div className="text-center py-12 text-slate-400">
         <Phone className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -83,88 +92,6 @@ function RecentCallsTable({ calls }: { calls: Call[] }) {
           ))}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-// ─── Distribution Charts ──────────────────────────────────────────────────────
-
-const RISK_COLORS: Record<string, string> = {
-  LOW: '#22c55e', MEDIUM: '#f59e0b', HIGH: '#ef4444', CRITICAL: '#7c3aed',
-};
-
-const CALLER_COLORS: Record<string, string> = {
-  HUMAN: '#10b981', AI: '#3b82f6', ROBOCALL: '#f97316', UNKNOWN: '#94a3b8',
-};
-
-function DistributionPie({
-  data, colors, title, mounted,
-}: {
-  data: Record<string, number>;
-  colors: Record<string, string>;
-  title: string;
-  mounted: boolean;
-}) {
-  const chartData = Object.entries(data || {}).map(([name, value]) => ({ name, value }));
-  const total = chartData.reduce((s, d) => s + d.value, 0);
-
-  if (!mounted || total === 0) {
-    return (
-      <div>
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">{title}</h3>
-        <div className="h-48 flex items-center justify-center text-slate-300 text-sm">No data yet</div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h3 className="text-sm font-semibold text-slate-700 mb-4">{title}</h3>
-      <div className="w-full h-48">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={chartData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value">
-              {chartData.map((entry) => (
-                <Cell key={entry.name} fill={colors[entry.name] || '#94a3b8'} />
-              ))}
-            </Pie>
-            <Tooltip formatter={(v: number) => [`${v} calls`, '']} />
-            <Legend iconSize={10} />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-}
-
-function IntentBarChart({ data, mounted }: { data: Record<string, number>; mounted: boolean }) {
-  const chartData = Object.entries(data || {})
-    .filter(([, v]) => v > 0)
-    .map(([name, value]) => ({ name: name.substring(0, 8), value, fullName: name }));
-
-  if (!mounted || chartData.length === 0) {
-    return (
-      <div>
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">Intent Distribution</h3>
-        <div className="h-48 flex items-center justify-center text-slate-300 text-sm">No data yet</div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h3 className="text-sm font-semibold text-slate-700 mb-4">Intent Distribution</h3>
-      <div className="w-full h-48">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-            <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip labelFormatter={(l) => chartData.find(d => d.name === l)?.fullName || l} />
-            <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
     </div>
   );
 }
@@ -261,7 +188,6 @@ export default function DashboardPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastRefreshed, setLastRefreshed] = useState<string>('');
 
   const loadData = async () => {
     setLoading(true);
@@ -298,7 +224,6 @@ export default function DashboardPage() {
       setError(e instanceof Error ? e.message : 'Failed to load data');
     } finally {
       setLoading(false);
-      setLastRefreshed(new Date().toISOString());
     }
   };
 
@@ -411,28 +336,8 @@ export default function DashboardPage() {
           <StatCard label="Promotional" value={stats?.promotional_calls ?? 0} icon={Megaphone} bgColor="bg-orange-50" color="text-orange-600" />
         </div>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="card">
-            <DistributionPie
-              title="Risk Distribution"
-              data={stats?.risk_distribution ?? {}}
-              colors={RISK_COLORS}
-              mounted={mounted}
-            />
-          </div>
-          <div className="card">
-            <DistributionPie
-              title="Caller Type"
-              data={stats?.caller_type_distribution ?? {}}
-              colors={CALLER_COLORS}
-              mounted={mounted}
-            />
-          </div>
-          <div className="card">
-            <IntentBarChart data={stats?.intent_distribution ?? {}} mounted={mounted} />
-          </div>
-        </div>
+        {/* Charts Row (Dynamically loaded on client) */}
+        <DashboardCharts stats={stats} />
 
         {/* Recent Calls + Notifications */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
