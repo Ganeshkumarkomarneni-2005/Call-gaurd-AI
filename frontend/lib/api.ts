@@ -278,7 +278,7 @@ export const dashboardApi = {
   stats: async (): Promise<DashboardStats> =>
     apiFetch('/api/v1/dashboard/statistics'),
 
-  recentCalls: async (): Promise<Call[]> =>
+  recentCalls: async (): Promise<CallListResponse> =>
     apiFetch('/api/v1/dashboard/recent-calls'),
 };
 

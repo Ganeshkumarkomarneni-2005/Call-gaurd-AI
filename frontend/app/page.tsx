@@ -44,7 +44,8 @@ function StatCard({
 // ─── Recent Calls Table ───────────────────────────────────────────────────────
 
 function RecentCallsTable({ calls }: { calls: Call[] }) {
-  if (!calls || calls.length === 0) {
+  const callList = Array.isArray(calls) ? calls : [];
+  if (callList.length === 0) {
     return (
       <div className="text-center py-12 text-slate-400">
         <Phone className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -65,7 +66,7 @@ function RecentCallsTable({ calls }: { calls: Call[] }) {
           </tr>
         </thead>
         <tbody>
-          {calls.map((call) => (
+          {callList.map((call) => (
             <tr key={call.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
               <td className="py-3 px-2">
                 <div className="font-medium text-slate-800">
@@ -109,7 +110,8 @@ function NotificationsPanel({ notifications }: { notifications: Notification[] }
     CALL_STARTED: '📞',
   };
 
-  if (!notifications || notifications.length === 0) {
+  const notifList = Array.isArray(notifications) ? notifications : [];
+  if (notifList.length === 0) {
     return (
       <div className="text-center py-8 text-slate-400">
         <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -120,7 +122,7 @@ function NotificationsPanel({ notifications }: { notifications: Notification[] }
 
   return (
     <ul className="space-y-2">
-      {notifications.slice(0, 5).map((n) => (
+      {notifList.slice(0, 5).map((n) => (
         <li
           key={n.id}
           className={`flex gap-3 p-3 rounded-lg text-sm ${n.read ? 'bg-slate-50' : 'bg-blue-50 border border-blue-100'}`}
@@ -208,9 +210,17 @@ export default function DashboardPage() {
         return;
       }
 
-      if (statsData.status === 'fulfilled') setStats(statsData.value);
-      if (callsData.status === 'fulfilled') setCalls(callsData.value);
-      if (notifData.status === 'fulfilled') setNotifications(notifData.value.notifications);
+      if (statsData.status === 'fulfilled') {
+        setStats(statsData.value);
+      }
+      if (callsData.status === 'fulfilled') {
+        const cVal = callsData.value as any;
+        setCalls(Array.isArray(cVal) ? cVal : (cVal?.calls || []));
+      }
+      if (notifData.status === 'fulfilled') {
+        const nVal = notifData.value as any;
+        setNotifications(Array.isArray(nVal) ? nVal : (nVal?.notifications || []));
+      }
 
       if (statsData.status === 'rejected') {
         const msg = statsData.reason?.message || '';

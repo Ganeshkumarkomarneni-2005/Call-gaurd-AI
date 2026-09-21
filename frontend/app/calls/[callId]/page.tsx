@@ -152,13 +152,13 @@ export default function CallDetailPage({ params }: PageProps) {
               </dl>
 
               {/* Risk Indicators */}
-              {analysis.risk_indicators.length > 0 && (
+              {(analysis.risk_indicators || []).length > 0 && (
                 <div className="mt-4 pt-4 border-t border-slate-100">
                   <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">
                     Risk Indicators
                   </p>
                   <ul className="space-y-1">
-                    {analysis.risk_indicators.map((indicator, i) => (
+                    {(analysis.risk_indicators || []).map((indicator, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-red-700">
                         <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-red-400" />
                         {indicator}
@@ -244,7 +244,7 @@ export default function CallDetailPage({ params }: PageProps) {
             )}
 
             <div className="space-y-3">
-              {transcript.segments.map((seg) => (
+              {(transcript.segments || []).map((seg) => (
                 <div
                   key={seg.id}
                   className={`flex gap-3 ${seg.speaker === 'AGENT' ? 'flex-row-reverse' : ''}`}
