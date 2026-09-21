@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { dashboardApi, callsApi, notificationsApi, type DashboardStats, type Call, type Notification } from '@/lib/api';
+import { dashboardApi, callsApi, notificationsApi, getToken, type DashboardStats, type Call, type Notification } from '@/lib/api';
 import { formatRelativeTime, formatDuration, riskBadgeClass, callerTypeBadgeClass, intentLabel, decisionLabel, type RiskLevel, type CallerType } from '@/lib/utils';
 import {
   BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis,
@@ -264,6 +264,13 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
 
+  // Redirect to /login if not authenticated
+  const redirectToLogin = () => {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -274,12 +281,27 @@ export default function DashboardPage() {
         notificationsApi.list(1, 10),
       ]);
 
+      // Check for auth errors first — any 401 means redirect to login
+      const authError = [statsData, callsData, notifData].find(
+        (r) => r.status === 'rejected' && r.reason?.message === 'AUTH_REQUIRED'
+      );
+      if (authError) {
+        redirectToLogin();
+        return;
+      }
+
       if (statsData.status === 'fulfilled') setStats(statsData.value);
       if (callsData.status === 'fulfilled') setCalls(callsData.value);
       if (notifData.status === 'fulfilled') setNotifications(notifData.value.notifications);
 
+      // Show connection error only for genuine network failures
       if (statsData.status === 'rejected') {
-        setError('Backend not reachable. Start the server: uvicorn backend.main:app --reload');
+        const msg = statsData.reason?.message || '';
+        if (msg.startsWith('NETWORK_ERROR')) {
+          setError('Cannot reach backend at http://localhost:8000 — is it running?');
+        } else {
+          setError(`API error: ${msg}`);
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load data');
@@ -290,9 +312,14 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    // Redirect immediately if no token is stored (user not logged in)
+    if (!getToken()) {
+      redirectToLogin();
+      return;
+    }
     loadData();
-    // Auto-refresh every 15 seconds
-    const interval = setInterval(loadData, 15_000);
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(loadData, 30_000);
     return () => clearInterval(interval);
   }, []);
 
