@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { dashboardApi, callsApi, notificationsApi, getToken, type DashboardStats, type Call, type Notification } from '@/lib/api';
-import { formatRelativeTime, formatDuration, riskBadgeClass, callerTypeBadgeClass, intentLabel, decisionLabel, type RiskLevel, type CallerType } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import { dashboardApi, callsApi, notificationsApi, getToken, clearToken, type DashboardStats, type Call, type Notification } from '@/lib/api';
+import { formatRelativeTime, formatDuration, riskBadgeClass, callerTypeBadgeClass, type RiskLevel, type CallerType } from '@/lib/utils';
 import {
   BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { Phone, Shield, AlertTriangle, Users, Bot, Megaphone, Briefcase, Bell, Activity, RefreshCw } from 'lucide-react';
+import { Phone, Shield, AlertTriangle, Users, Bot, Megaphone, Briefcase, Bell, Activity, RefreshCw, LogOut } from 'lucide-react';
+import Link from 'next/link';
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
@@ -28,16 +30,6 @@ function StatCard({
       </div>
     </div>
   );
-}
-
-// ─── Risk Badge ───────────────────────────────────────────────────────────────
-
-function RiskBadge({ risk }: { risk: string }) {
-  return <span className={riskBadgeClass(risk as RiskLevel)}>{risk}</span>;
-}
-
-function CallerTypeBadge({ type }: { type: string }) {
-  return <span className={callerTypeBadgeClass(type as CallerType)}>{type}</span>;
 }
 
 // ─── Recent Calls Table ───────────────────────────────────────────────────────
@@ -74,10 +66,10 @@ function RecentCallsTable({ calls }: { calls: Call[] }) {
               </td>
               <td className="py-3 px-2">
                 <span className={`badge ${
-                  call.status === 'ENDED' ? 'bg-slate-100 text-slate-600'
-                  : call.status === 'ACTIVE' ? 'bg-green-100 text-green-700'
-                  : call.status === 'TRANSFERRED' ? 'bg-blue-100 text-blue-700'
-                  : call.status === 'FAILED' ? 'bg-red-100 text-red-700'
+                  call.status?.toUpperCase() === 'ENDED' ? 'bg-slate-100 text-slate-600'
+                  : call.status?.toUpperCase() === 'ACTIVE' ? 'bg-green-100 text-green-700'
+                  : call.status?.toUpperCase() === 'TRANSFERRED' ? 'bg-blue-100 text-blue-700'
+                  : call.status?.toUpperCase() === 'FAILED' ? 'bg-red-100 text-red-700'
                   : 'bg-amber-100 text-amber-700'
                 }`}>{call.status}</span>
               </td>
@@ -106,16 +98,17 @@ const CALLER_COLORS: Record<string, string> = {
 };
 
 function DistributionPie({
-  data, colors, title,
+  data, colors, title, mounted,
 }: {
   data: Record<string, number>;
   colors: Record<string, string>;
   title: string;
+  mounted: boolean;
 }) {
-  const chartData = Object.entries(data).map(([name, value]) => ({ name, value }));
+  const chartData = Object.entries(data || {}).map(([name, value]) => ({ name, value }));
   const total = chartData.reduce((s, d) => s + d.value, 0);
 
-  if (total === 0) {
+  if (!mounted || total === 0) {
     return (
       <div>
         <h3 className="text-sm font-semibold text-slate-700 mb-4">{title}</h3>
@@ -127,27 +120,29 @@ function DistributionPie({
   return (
     <div>
       <h3 className="text-sm font-semibold text-slate-700 mb-4">{title}</h3>
-      <ResponsiveContainer width="100%" height={200}>
-        <PieChart>
-          <Pie data={chartData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value">
-            {chartData.map((entry) => (
-              <Cell key={entry.name} fill={colors[entry.name] || '#94a3b8'} />
-            ))}
-          </Pie>
-          <Tooltip formatter={(v: number) => [`${v} calls`, '']} />
-          <Legend iconSize={10} />
-        </PieChart>
-      </ResponsiveContainer>
+      <div className="w-full h-48">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={chartData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value">
+              {chartData.map((entry) => (
+                <Cell key={entry.name} fill={colors[entry.name] || '#94a3b8'} />
+              ))}
+            </Pie>
+            <Tooltip formatter={(v: number) => [`${v} calls`, '']} />
+            <Legend iconSize={10} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
 
-function IntentBarChart({ data }: { data: Record<string, number> }) {
-  const chartData = Object.entries(data)
+function IntentBarChart({ data, mounted }: { data: Record<string, number>; mounted: boolean }) {
+  const chartData = Object.entries(data || {})
     .filter(([, v]) => v > 0)
     .map(([name, value]) => ({ name: name.substring(0, 8), value, fullName: name }));
 
-  if (chartData.length === 0) {
+  if (!mounted || chartData.length === 0) {
     return (
       <div>
         <h3 className="text-sm font-semibold text-slate-700 mb-4">Intent Distribution</h3>
@@ -159,15 +154,17 @@ function IntentBarChart({ data }: { data: Record<string, number> }) {
   return (
     <div>
       <h3 className="text-sm font-semibold text-slate-700 mb-4">Intent Distribution</h3>
-      <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-          <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-          <YAxis tick={{ fontSize: 10 }} />
-          <Tooltip labelFormatter={(l) => chartData.find(d => d.name === l)?.fullName || l} />
-          <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+      <div className="w-full h-48">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+            <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} />
+            <Tooltip labelFormatter={(l) => chartData.find(d => d.name === l)?.fullName || l} />
+            <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -185,7 +182,7 @@ function NotificationsPanel({ notifications }: { notifications: Notification[] }
     CALL_STARTED: '📞',
   };
 
-  if (notifications.length === 0) {
+  if (!notifications || notifications.length === 0) {
     return (
       <div className="text-center py-8 text-slate-400">
         <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -215,10 +212,6 @@ function NotificationsPanel({ notifications }: { notifications: Notification[] }
 
 // ─── Demo Simulator ───────────────────────────────────────────────────────────
 
-const DEMO_NUMBERS = [
-  { label: 'Simulate incoming call', number: '+911234567890' },
-];
-
 function DemoSimulator({ onSimulate }: { onSimulate: () => void }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -228,28 +221,32 @@ function DemoSimulator({ onSimulate }: { onSimulate: () => void }) {
     setMessage('');
     try {
       await callsApi.simulateIncoming('+911234567890');
-      setMessage('✅ Mock call created! Refresh to see it in the list.');
+      setMessage('✅ Call simulated successfully!');
       onSimulate();
     } catch (e) {
-      setMessage(`❌ ${e instanceof Error ? e.message : 'Failed'} — is the backend running?`);
+      setMessage(`❌ Failed: ${e instanceof Error ? e.message : 'Error'}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="card border-dashed border-brand-500 bg-brand-50">
-      <h3 className="font-semibold text-brand-900 mb-2 flex items-center gap-2">
-        <Activity className="w-4 h-4" /> Simulate Incoming Call
+    <div className="card bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+      <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+        <Activity className="w-4 h-4 text-blue-400" />
+        Demo Call Simulator
       </h3>
-      <p className="text-sm text-brand-700 mb-4">
-        Create a mock incoming call to test the pipeline. Requires backend running at{' '}
-        <code className="bg-brand-100 px-1 rounded text-xs">localhost:8000</code>.
+      <p className="text-xs text-slate-400 mb-4">
+        Inject a simulated incoming call to trigger real-time AI classification & analysis.
       </p>
-      <button onClick={simulate} disabled={loading} className="btn-primary">
+      <button
+        onClick={simulate}
+        disabled={loading}
+        className="btn-primary w-full py-2 text-xs"
+      >
         {loading ? 'Creating call…' : '📞 Simulate Call'}
       </button>
-      {message && <p className="mt-2 text-sm">{message}</p>}
+      {message && <p className="mt-2 text-xs text-slate-300">{message}</p>}
     </div>
   );
 }
@@ -257,19 +254,14 @@ function DemoSimulator({ onSimulate }: { onSimulate: () => void }) {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [calls, setCalls] = useState<Call[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
-
-  // Redirect to /login if not authenticated
-  const redirectToLogin = () => {
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
-    }
-  };
+  const [lastRefreshed, setLastRefreshed] = useState<string>('');
 
   const loadData = async () => {
     setLoading(true);
@@ -281,12 +273,12 @@ export default function DashboardPage() {
         notificationsApi.list(1, 10),
       ]);
 
-      // Check for auth errors first — any 401 means redirect to login
       const authError = [statsData, callsData, notifData].find(
         (r) => r.status === 'rejected' && r.reason?.message === 'AUTH_REQUIRED'
       );
       if (authError) {
-        redirectToLogin();
+        clearToken();
+        router.push('/login');
         return;
       }
 
@@ -294,7 +286,6 @@ export default function DashboardPage() {
       if (callsData.status === 'fulfilled') setCalls(callsData.value);
       if (notifData.status === 'fulfilled') setNotifications(notifData.value.notifications);
 
-      // Show connection error only for genuine network failures
       if (statsData.status === 'rejected') {
         const msg = statsData.reason?.message || '';
         if (msg.startsWith('NETWORK_ERROR')) {
@@ -307,28 +298,32 @@ export default function DashboardPage() {
       setError(e instanceof Error ? e.message : 'Failed to load data');
     } finally {
       setLoading(false);
-      setLastRefreshed(new Date());
+      setLastRefreshed(new Date().toISOString());
     }
   };
 
   useEffect(() => {
-    // Redirect immediately if no token is stored (user not logged in)
+    setMounted(true);
     if (!getToken()) {
-      redirectToLogin();
+      router.push('/login');
       return;
     }
     loadData();
-    // Auto-refresh every 30 seconds
     const interval = setInterval(loadData, 30_000);
     return () => clearInterval(interval);
   }, []);
 
-  if (loading && !stats) {
+  const handleLogout = () => {
+    clearToken();
+    router.push('/login');
+  };
+
+  if (!mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-500">Connecting to CallGuard AI…</p>
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-500 text-sm">Loading CallGuard AI…</p>
         </div>
       </div>
     );
@@ -340,16 +335,21 @@ export default function DashboardPage() {
       <header className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Shield className="w-8 h-8 text-brand-600" />
+            <div className="p-2 bg-blue-600 rounded-lg text-white">
+              <Shield className="w-6 h-6" />
+            </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900">CallGuard AI</h1>
               <p className="text-xs text-slate-400">Intelligent Call Screening Dashboard</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/calls" className="btn-secondary text-xs">
+              All Calls
+            </Link>
             {notifications.filter(n => !n.read).length > 0 && (
               <span className="flex items-center gap-1.5 text-sm text-slate-600">
-                <Bell className="w-4 h-4" />
+                <Bell className="w-4 h-4 text-slate-500" />
                 <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
                   {notifications.filter(n => !n.read).length}
                 </span>
@@ -362,9 +362,13 @@ export default function DashboardPage() {
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </button>
-            <span className="text-xs text-slate-400">
-              Updated {formatRelativeTime(lastRefreshed.toISOString())}
-            </span>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+              title="Log out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </header>
@@ -375,22 +379,19 @@ export default function DashboardPage() {
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-amber-800">Backend not connected</p>
+              <p className="font-medium text-amber-800">Connection Notice</p>
               <p className="text-sm text-amber-600 mt-1">{error}</p>
-              <code className="text-xs bg-amber-100 px-2 py-1 rounded mt-2 block w-fit">
-                python -m uvicorn backend.main:app --reload
-              </code>
             </div>
           </div>
         )}
 
         {/* Core Principle Banner */}
-        <div className="bg-gradient-to-r from-brand-900 to-brand-600 text-white rounded-xl p-5">
-          <p className="text-sm font-medium opacity-75 mb-1">Core Intelligence Principle</p>
+        <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white rounded-xl p-5 shadow-sm">
+          <p className="text-xs font-semibold tracking-wider uppercase text-blue-400 mb-1">Core Intelligence Principle</p>
           <p className="text-lg font-bold">
             CALLER TYPE ≠ INTENT ≠ RISK ≠ ACTION
           </p>
-          <p className="text-sm opacity-75 mt-1">
+          <p className="text-sm text-slate-300 mt-1">
             A legitimate AI caller is not dangerous. A human caller can be a scammer. Every dimension is assessed independently.
           </p>
         </div>
@@ -417,6 +418,7 @@ export default function DashboardPage() {
               title="Risk Distribution"
               data={stats?.risk_distribution ?? {}}
               colors={RISK_COLORS}
+              mounted={mounted}
             />
           </div>
           <div className="card">
@@ -424,20 +426,26 @@ export default function DashboardPage() {
               title="Caller Type"
               data={stats?.caller_type_distribution ?? {}}
               colors={CALLER_COLORS}
+              mounted={mounted}
             />
           </div>
           <div className="card">
-            <IntentBarChart data={stats?.intent_distribution ?? {}} />
+            <IntentBarChart data={stats?.intent_distribution ?? {}} mounted={mounted} />
           </div>
         </div>
 
         {/* Recent Calls + Notifications */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="card md:col-span-2">
-            <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <Phone className="w-4 h-4 text-slate-400" />
-              Recent Calls
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                <Phone className="w-4 h-4 text-slate-400" />
+                Recent Calls
+              </h2>
+              <Link href="/calls" className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                View all →
+              </Link>
+            </div>
             <RecentCallsTable calls={calls} />
           </div>
 

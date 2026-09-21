@@ -10,7 +10,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 export interface Call {
   id: string;
   user_id: string;
-  status: 'RINGING' | 'ACTIVE' | 'ENDED' | 'TRANSFERRED' | 'FAILED';
+  status: 'RINGING' | 'ACTIVE' | 'ENDED' | 'TRANSFERRED' | 'FAILED' | string;
   caller_number: string | null;
   caller_name: string | null;
   virtual_number: string;
