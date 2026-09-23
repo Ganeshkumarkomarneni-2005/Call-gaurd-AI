@@ -321,6 +321,72 @@ class RecruitmentAgent(BaseAgent):
     ) -> RecruitmentExtractionResult | None:
         """Hook for plugging in a trained NER / classification model.
 
-        Return ``None`` to fall back to regex extraction.
+        Leverages `recruitment_detector_v1.0.0.joblib` and `recruitment_legitimacy_v1.0.0.joblib`
+        when available to classify recruitment relevance and legitimacy.
         """
-        return None
+        try:
+            import joblib
+            from pathlib import Path
+
+            s1_path = Path("ml/models/recruitment_detector_v1.0.0.joblib")
+            s2_path = Path("ml/models/recruitment_legitimacy_v1.0.0.joblib")
+
+            if not s1_path.exists() or not s2_path.exists():
+                return None
+
+            s1_bundle = joblib.load(s1_path)
+            s2_bundle = joblib.load(s2_path)
+
+            v1, m1 = s1_bundle.get("vectorizer"), s1_bundle.get("model")
+            v2, m2 = s2_bundle.get("vectorizer"), s2_bundle.get("model")
+
+            if not v1 or not m1 or not v2 or not m2:
+                return None
+
+            caller_text = self._build_caller_text(input_data.conversation)
+            full_text = self._build_full_text(input_data.conversation)
+            eval_text = caller_text if caller_text.strip() else full_text
+            if not eval_text.strip():
+                return None
+
+            # Stage 1: Recruitment vs Non-recruitment
+            X1 = v1.transform([eval_text])
+            is_recruitment = bool(m1.predict(X1)[0])
+
+            if not is_recruitment:
+                return None
+
+            # Stage 2: Legitimate vs Fraudulent Recruitment
+            X2 = v2.transform([eval_text])
+            is_legit = bool(m2.predict(X2)[0])
+
+            # Extract entities using rule-based/regex helpers
+            company = self._extract_company(full_text)
+            recruiter_name = self._extract_recruiter(full_text)
+            position = self._extract_position(full_text)
+            interview_date = self._extract_date(full_text)
+            interview_time = self._extract_time(full_text)
+            interview_stage = self._extract_stage(full_text)
+            next_step = self._infer_next_step(caller_text, position, interview_date)
+
+            if is_legit:
+                reason = "ML Verified: Authentic recruitment communication pattern detected"
+            else:
+                reason = "ML Alert: Fraudulent recruitment markers or advance fee pattern detected"
+
+            return RecruitmentExtractionResult(
+                company=company,
+                recruiter_name=recruiter_name,
+                position=position,
+                interview_stage=interview_stage,
+                interview_date=interview_date,
+                interview_time=interview_time,
+                next_step=next_step,
+                is_legitimate=is_legit,
+                legitimacy_reason=reason,
+                confidence=0.98,
+                model_version="v1.0.0-hierarchical_lr",
+            )
+        except Exception:
+            return None
+

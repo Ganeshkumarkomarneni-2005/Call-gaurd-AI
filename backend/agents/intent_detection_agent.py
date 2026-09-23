@@ -341,13 +341,89 @@ class IntentDetectionAgent(BaseAgent):
     ) -> IntentClassificationResult | None:
         """Hook for plugging in a trained intent classifier.
 
-        Override in a subclass to use a TF-IDF + LR model or transformer.
-        Return ``None`` to fall back to keyword scoring.
+        Attempts to load and run inference with the trained LinearSVC + TF-IDF model
+        located in `ml/models/intent_classifier_v1.0.0.joblib`.
+        Returns ``None`` to fall back to keyword scoring if model or dependencies
+        are not loaded.
 
         Args:
-            input_data: Full classification input including audio features.
+            input_data: Full classification input including conversation turns.
 
         Returns:
             :class:`IntentClassificationResult` or ``None`` for fallback.
         """
-        return None
+        try:
+            import joblib
+            from pathlib import Path
+
+            model_path = Path("ml/models/intent_classifier_v1.0.0.joblib")
+            if not model_path.exists():
+                return None
+
+            bundle = joblib.load(model_path)
+            vectorizer = bundle.get("vectorizer")
+            model = bundle.get("model")
+            classes = bundle.get("classes", [])
+
+            if not vectorizer or not model:
+                return None
+
+            caller_text = self._build_caller_text(input_data.conversation)
+            if not caller_text.strip():
+                return None
+
+            X = vectorizer.transform([caller_text])
+            predicted_label = model.predict(X)[0]
+
+            # Label mapping from dataset tags to domain Intent enum
+            label_map = {
+                "recruitment": Intent.RECRUITMENT.value,
+                "interview_scheduling": Intent.RECRUITMENT.value,
+                "fraud_scam": Intent.FRAUD.value,
+                "otp_theft": Intent.FRAUD.value,
+                "promotional": Intent.PROMOTIONAL.value,
+                "customer_service": Intent.CUSTOMER_SERVICE.value,
+                "delivery": Intent.DELIVERY.value,
+                "unknown": Intent.UNKNOWN.value,
+            }
+
+            intent_value = label_map.get(str(predicted_label).lower(), Intent.UNKNOWN.value)
+
+            # Confidence estimation from decision function if available
+            confidence = 0.95
+            if hasattr(model, "decision_function"):
+                try:
+                    df = model.decision_function(X)
+                    if len(df.shape) > 1:
+                        import numpy as np
+                        # Softmax approximation over decision scores
+                        exp_scores = np.exp(df[0] - np.max(df[0]))
+                        probs = exp_scores / np.sum(exp_scores)
+                        confidence = float(np.max(probs))
+                except Exception:
+                    confidence = 0.95
+
+            confidence = round(float(confidence), 4)
+
+            # Top TF-IDF evidence words
+            evidence: list[str] = []
+            try:
+                feature_names = vectorizer.get_feature_names_out()
+                row = X.toarray()[0]
+                top_indices = row.argsort()[-4:][::-1]
+                for idx in top_indices:
+                    if row[idx] > 0:
+                        evidence.append(f"ML feature cue: '{feature_names[idx]}'")
+            except Exception:
+                evidence.append(f"ML Model classification: '{predicted_label}'")
+
+            return IntentClassificationResult(
+                intent=intent_value,
+                secondary_intent=None,
+                confidence=confidence,
+                evidence=evidence,
+                model_version="v1.0.0-linear_svc",
+            )
+        except Exception:
+            return None
+

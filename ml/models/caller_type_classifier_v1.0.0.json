@@ -1,0 +1,20 @@
+{
+  "name": "caller_type_classifier",
+  "version": "1.0.0",
+  "classes": [
+    "ai",
+    "human",
+    "robocall",
+    "unknown"
+  ],
+  "features": [
+    "word_count",
+    "avg_word_length",
+    "exclamation_count",
+    "question_count",
+    "has_automated_cue",
+    "turn_count",
+    "caller_turn_count",
+    "avg_caller_turn_words"
+  ]
+}

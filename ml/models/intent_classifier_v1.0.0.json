@@ -1,0 +1,18 @@
+{
+  "name": "intent_classifier",
+  "version": "1.0.0",
+  "algorithm": "LinearSVC + TF-IDF (1,2 n-grams)",
+  "accuracy": 1.0,
+  "weighted_f1": 1.0,
+  "classes": [
+    "customer_service",
+    "delivery",
+    "fraud_scam",
+    "interview_scheduling",
+    "otp_theft",
+    "promotional",
+    "recruitment",
+    "unknown"
+  ],
+  "max_features": 5000
+}

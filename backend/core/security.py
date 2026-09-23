@@ -80,6 +80,43 @@ def decode_access_token(token: str) -> Optional[dict]:
         return None
 
 
+def create_password_reset_token(email: str, expires_minutes: int = 15) -> str:
+    """Create a signed JWT token specifically for password resets.
+
+    Args:
+        email: User email address.
+        expires_minutes: Token validity lifetime (default 15 mins).
+
+    Returns:
+        Encoded JWT token string.
+    """
+    expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
+    payload = {
+        "sub": email,
+        "scope": "password_reset",
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=_ALGORITHM)
+
+
+def verify_password_reset_token(token: str) -> Optional[str]:
+    """Verify a password reset token and return the associated email address.
+
+    Args:
+        token: JWT reset token.
+
+    Returns:
+        The email address if valid, or None if invalid/expired.
+    """
+    payload = decode_access_token(token)
+    if payload is None:
+        return None
+    if payload.get("scope") != "password_reset":
+        return None
+    return payload.get("sub")
+
+
+
 # ---------------------------------------------------------------------------
 # FastAPI dependency
 # ---------------------------------------------------------------------------

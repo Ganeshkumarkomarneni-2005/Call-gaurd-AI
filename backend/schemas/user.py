@@ -57,3 +57,31 @@ class TokenData(BaseModel):
     """Data embedded inside a JWT token."""
 
     email: Optional[str] = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Payload for requesting a password reset email."""
+
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Payload for submitting a new password using a reset token."""
+
+    token: str = Field(..., min_length=1, description="Reset token from email")
+    new_password: str = Field(..., min_length=8, description="Minimum 8 characters")
+
+    @field_validator("new_password")
+    @classmethod
+    def _password_strength(cls, v: str) -> str:
+        if v.isdigit():
+            raise ValueError("Password must not be entirely numeric")
+        return v
+
+
+class MessageResponse(BaseModel):
+    """Generic status and message response."""
+
+    message: str
+    reset_link: Optional[str] = None
+

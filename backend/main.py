@@ -72,11 +72,13 @@ from backend.api.routes.calls import router as calls_router  # noqa: E402
 from backend.api.routes.dashboard import router as dashboard_router  # noqa: E402
 from backend.api.routes.health import router as health_router  # noqa: E402
 from backend.api.routes.notifications import router as notifications_router  # noqa: E402
+from backend.api.routes.telephony import router as telephony_router  # noqa: E402
 from backend.api.websocket import router as ws_router  # noqa: E402
 
 app.include_router(health_router)
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(calls_router, prefix="/api/v1")
+app.include_router(telephony_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(notifications_router, prefix="/api/v1")
 app.include_router(ws_router)  # WebSocket routes carry their own paths

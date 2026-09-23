@@ -214,10 +214,18 @@ class FraudDetectionAgent(BaseAgent):
         has_mitigation = self._check_mitigation(full_text)
 
         indicators: list[RiskIndicator] = []
+
+        # ML-assisted fraud risk inference
+        ml_indicator = self._ml_detect_fraud(caller_text)
+        if ml_indicator is not None:
+            indicators.append(ml_indicator)
+
         for spec in _INDICATOR_SPECS:
             indicator = self._evaluate_indicator(spec, caller_text, has_mitigation)
             if indicator is not None:
-                indicators.append(indicator)
+                # Avoid exact duplicate indicator types if already detected with higher confidence
+                if not any(i.indicator_type == indicator.indicator_type for i in indicators):
+                    indicators.append(indicator)
 
         self._log_event(
             "fraud_detection_complete",
@@ -226,6 +234,7 @@ class FraudDetectionAgent(BaseAgent):
             indicator_types=[i.indicator_type for i in indicators],
         )
         return indicators
+
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -296,3 +305,59 @@ class FraudDetectionAgent(BaseAgent):
             severity=severity.value,
             confidence=confidence,
         )
+
+    def _ml_detect_fraud(self, caller_text: str) -> RiskIndicator | None:
+        """Evaluate caller text against the trained ML fraud risk model."""
+        if not caller_text or not caller_text.strip():
+            return None
+        try:
+            import joblib
+            from pathlib import Path
+
+            model_path = Path("ml/models/fraud_risk_model_v1.0.0.joblib")
+            if not model_path.exists():
+                return None
+
+            bundle = joblib.load(model_path)
+            model = bundle.get("model")
+            tfidf = bundle.get("tfidf")
+            threshold = bundle.get("threshold", 0.35)
+
+            if not model or not tfidf:
+                return None
+
+            # TF-IDF transform
+            tfidf_vec = tfidf.transform([caller_text])
+
+            # Linguistic feature extraction matching training
+            from scipy.sparse import hstack
+            urgency_kws = {"urgent", "immediately", "expire", "suspended", "warning", "action required", "freeze", "otp", "pin"}
+            monetary_kws = {"fee", "payment", "bank", "deposit", "transfer", "gift card", "crypto", "wire", "money"}
+
+            text_lower = caller_text.lower()
+            words = re.findall(r"\b\w+\b", text_lower)
+            word_count = len(words)
+            avg_word_length = float(sum(len(w) for w in words) / word_count) if word_count > 0 else 0.0
+            urgency_count = sum(1 for w in words if w in urgency_kws)
+            monetary_count = sum(1 for w in words if w in monetary_kws)
+
+            import numpy as np
+            ling_vec = np.array([[word_count, avg_word_length, urgency_count, monetary_count]])
+            X_comp = hstack([tfidf_vec, ling_vec])
+
+            # Predict fraud probability
+            probs = model.predict_proba(X_comp)[0]
+            fraud_prob = float(probs[1]) if len(probs) > 1 else float(probs[0])
+
+            if fraud_prob >= threshold:
+                severity = Severity.CRITICAL if fraud_prob >= 0.70 else Severity.HIGH
+                return RiskIndicator(
+                    indicator_type=FraudIndicatorType.CREDENTIAL_REQUEST.value if "otp" in text_lower or "password" in text_lower else FraudIndicatorType.PAYMENT_REQUEST.value,
+                    description=f"ML Fraud Risk Model Alert: High probability threat detected ({fraud_prob:.1%})",
+                    severity=severity.value,
+                    confidence=round(fraud_prob, 4),
+                )
+            return None
+        except Exception:
+            return None
+

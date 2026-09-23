@@ -1,4 +1,4 @@
-﻿"""
+"""
 Exotel telephony provider.
 
 STATUS: STUB - Requires EXTERNAL CREDENTIALS
@@ -59,14 +59,16 @@ class ExotelTelephonyProvider(BaseTelephonyProvider):
     def __init__(
         self,
         sid: str | None = None,
+        api_key: str | None = None,
         token: str | None = None,
         from_number: str | None = None,
         subdomain: str | None = None,
     ) -> None:
         super().__init__()
-        self.sid = sid or os.environ["EXOTEL_SID"]
-        self.token = token or os.environ["EXOTEL_TOKEN"]
-        self.from_number = from_number or os.environ["EXOTEL_FROM_NUMBER"]
+        self.sid = sid or os.environ.get("EXOTEL_SID", "")
+        self.api_key = api_key or os.environ.get("EXOTEL_API_KEY") or self.sid
+        self.token = token or os.environ.get("EXOTEL_TOKEN", "")
+        self.from_number = from_number or os.environ.get("EXOTEL_FROM_NUMBER", "")
         self.subdomain = subdomain or os.environ.get(
             "EXOTEL_SUBDOMAIN", "api.exotel.com"
         )
@@ -74,7 +76,7 @@ class ExotelTelephonyProvider(BaseTelephonyProvider):
             subdomain=self.subdomain, sid=self.sid
         )
         self._client = httpx.AsyncClient(
-            auth=(self.sid, self.token),
+            auth=(self.api_key, self.token),
             timeout=30.0,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )

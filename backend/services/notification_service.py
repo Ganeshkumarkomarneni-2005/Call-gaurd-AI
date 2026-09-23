@@ -15,6 +15,70 @@ from backend.utils.time_utils import now_utc
 logger: structlog.BoundLogger = structlog.get_logger(__name__)
 
 
+import os
+import httpx
+
+async def send_telegram_alert(title: str, body: str, call_id: Optional[UUID] = None) -> bool:
+    """Send an instant formatted alert to Telegram."""
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if not bot_token or not chat_id:
+        return False
+
+    message_text = (
+        f"🛡️ *CallGuard AI Alert*\n\n"
+        f"*{title}*\n"
+        f"{body}\n"
+    )
+    if call_id:
+        message_text += f"\n🔍 *Call ID*: `{str(call_id)[:8]}`"
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                json={
+                    "chat_id": chat_id,
+                    "text": message_text,
+                    "parse_mode": "Markdown",
+                },
+            )
+            return resp.status_code == 200
+    except Exception as exc:
+        logger.warning("Failed to send Telegram alert", error=str(exc))
+        return False
+
+
+async def send_sms_alert(title: str, body: str, to_number: Optional[str] = None) -> bool:
+    """Send an SMS alert via Exotel."""
+    sid = os.environ.get("EXOTEL_SID")
+    api_key = os.environ.get("EXOTEL_API_KEY") or sid
+    token = os.environ.get("EXOTEL_TOKEN")
+    from_num = os.environ.get("EXOTEL_FROM_NUMBER")
+    recipient = to_number or os.environ.get("USER_ALERT_PHONE_NUMBER")
+
+    if not all([sid, token, from_num, recipient]):
+        return False
+
+    sms_url = f"https://api.exotel.com/v1/Accounts/{sid}/Sms/send.json"
+    sms_body = f"CallGuard Alert: {title} - {body}"[:150]
+
+    try:
+        async with httpx.AsyncClient(auth=(api_key, token), timeout=10.0) as client:
+            resp = await client.post(
+                sms_url,
+                data={
+                    "From": from_num,
+                    "To": recipient,
+                    "Body": sms_body,
+                },
+            )
+            return resp.status_code in (200, 201)
+    except Exception as exc:
+        logger.warning("Failed to send SMS alert", error=str(exc))
+        return False
+
+
 async def create_notification(
     db: AsyncSession,
     user_id: UUID,
@@ -23,19 +87,7 @@ async def create_notification(
     body: str,
     call_id: Optional[UUID] = None,
 ) -> Notification:
-    """Create and persist a new notification.
-
-    Args:
-        db: Async database session.
-        user_id: Recipient user identifier.
-        notification_type: Category string (e.g. ``"call_alert"``).
-        title: Short notification title.
-        body: Full notification body text.
-        call_id: Optional associated call identifier.
-
-    Returns:
-        The persisted :class:`Notification` instance.
-    """
+    """Create and persist a new notification and dispatch external alerts."""
     notification = Notification(
         user_id=user_id,
         call_id=call_id,
@@ -46,8 +98,16 @@ async def create_notification(
     db.add(notification)
     await db.flush()
     await db.refresh(notification)
+
+    # Dispatch to Telegram and SMS in background
+    try:
+        await send_telegram_alert(title, body, call_id)
+        await send_sms_alert(title, body)
+    except Exception as e:
+        logger.warning("External alert dispatch failed", error=str(e))
+
     logger.info(
-        "Notification created",
+        "Notification created and dispatched",
         notification_id=str(notification.id),
         user_id=str(user_id),
         type=notification_type,

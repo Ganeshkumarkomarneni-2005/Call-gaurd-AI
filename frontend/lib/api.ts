@@ -230,8 +230,21 @@ export const authApi = {
       body: JSON.stringify({ email, password, full_name: fullName }),
     }),
 
+  forgotPassword: async (email: string): Promise<{ message: string; reset_link?: string }> =>
+    apiFetch('/api/v1/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> =>
+    apiFetch('/api/v1/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, new_password: newPassword }),
+    }),
+
   me: async (): Promise<User> => apiFetch('/api/v1/auth/me'),
 };
+
 
 // ─── Calls ──────────────────────────────────────────────────────────────────────
 

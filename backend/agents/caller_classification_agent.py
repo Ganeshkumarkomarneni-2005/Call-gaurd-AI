@@ -329,14 +329,63 @@ class CallerClassificationAgent(BaseAgent):
     ) -> tuple[CallerType, float] | None:
         """Hook for plugging in an ML model.
 
-        Override this method in a subclass to use a trained classifier.
-        Return ``None`` to fall back to rule-based scoring.
-
-        Args:
-            features:       Extracted text features.
-            audio_features: Raw audio feature dict from the telephony layer.
-
-        Returns:
-            Tuple of ``(CallerType, confidence)`` or ``None`` for fallback.
+        Evaluates `caller_type_classifier_v1.0.0.joblib` on the conversation features.
+        Returns ``None`` to fall back to rule-based scoring if not available.
         """
-        return None
+        try:
+            import joblib
+            from pathlib import Path
+            import numpy as np
+
+            model_path = Path("ml/models/caller_type_classifier_v1.0.0.joblib")
+            if not model_path.exists():
+                return None
+
+            bundle = joblib.load(model_path)
+            model = bundle.get("model")
+            classes = bundle.get("classes", [])
+
+            if not model:
+                return None
+
+            full_text = " ".join(features.caller_turns).lower()
+            if not full_text.strip():
+                return None
+
+            words = re.findall(r"\b\w+\b", full_text)
+            word_count = len(words)
+            avg_word_length = float(sum(len(w) for w in words) / word_count) if word_count > 0 else 0.0
+            exclamation_count = full_text.count("!")
+            question_count = full_text.count("?")
+            has_automated_cue = int("assistant" in full_text or "automated" in full_text or "press 1" in full_text)
+            turn_count = features.turn_count
+            caller_turn_count = len(features.caller_turns)
+            avg_caller_turn_words = features.avg_turn_length
+
+            feature_vector = np.array([[
+                word_count,
+                avg_word_length,
+                exclamation_count,
+                question_count,
+                has_automated_cue,
+                turn_count,
+                caller_turn_count,
+                avg_caller_turn_words,
+            ]])
+
+            pred_label = model.predict(feature_vector)[0]
+            probs = model.predict_proba(feature_vector)[0]
+            confidence = float(np.max(probs))
+
+            type_map = {
+                "ai": CallerType.AI,
+                "human": CallerType.HUMAN,
+                "robocall": CallerType.ROBOCALL,
+                "unknown": CallerType.UNKNOWN,
+            }
+
+            caller_type = type_map.get(str(pred_label).lower(), CallerType.UNKNOWN)
+            return caller_type, round(confidence, 4)
+        except Exception:
+            return None
+

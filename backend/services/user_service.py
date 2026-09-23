@@ -94,3 +94,28 @@ async def authenticate_user(
         logger.warning("Auth failed: inactive account", email=email)
         return None
     return user
+
+
+async def update_user_password(
+    db: AsyncSession, email: str, new_password: str
+) -> Optional[User]:
+    """Update password for an existing user account.
+
+    Args:
+        db: Async database session.
+        email: User email address.
+        new_password: New plain-text password to hash and store.
+
+    Returns:
+        The updated :class:`User` if found, or ``None``.
+    """
+    user = await get_user_by_email(db, email)
+    if user is None:
+        return None
+
+    user.hashed_password = hash_password(new_password)
+    await db.flush()
+    await db.refresh(user)
+    logger.info("User password updated successfully", user_id=str(user.id), email=email)
+    return user
+

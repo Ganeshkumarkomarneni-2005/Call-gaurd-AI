@@ -53,8 +53,14 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------------- CORS --
     cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8000"]
 
-    # --------------------------------------------------------- Notification --
+    # --------------------------------------------------------- Notification & Mail --
     notification_provider: str = "web_push"
+    frontend_url: str = "http://localhost:3000"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@callguard.ai"
 
 
 def get_settings() -> Settings:

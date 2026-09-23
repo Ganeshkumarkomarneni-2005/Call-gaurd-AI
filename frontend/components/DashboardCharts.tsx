@@ -6,12 +6,22 @@ import {
 } from 'recharts';
 
 const RISK_COLORS: Record<string, string> = {
-  LOW: '#22c55e', MEDIUM: '#f59e0b', HIGH: '#ef4444', CRITICAL: '#7c3aed',
+  low: '#22c55e',
+  medium: '#f59e0b',
+  high: '#ef4444',
+  critical: '#dc2626',
 };
 
 const CALLER_COLORS: Record<string, string> = {
-  HUMAN: '#10b981', AI: '#3b82f6', ROBOCALL: '#f97316', UNKNOWN: '#94a3b8',
+  human: '#10b981',
+  ai: '#3b82f6',
+  robocall: '#f97316',
+  unknown: '#64748b',
 };
+
+const INTENT_COLORS: string[] = [
+  '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#6366f1'
+];
 
 interface DashboardChartsProps {
   stats: {
@@ -22,15 +32,28 @@ interface DashboardChartsProps {
 }
 
 export default function DashboardCharts({ stats }: DashboardChartsProps) {
-  const riskData = Object.entries(stats?.risk_distribution || {}).map(([name, value]) => ({ name, value }));
+  const riskData = Object.entries(stats?.risk_distribution || {}).map(([name, value]) => ({
+    name: name.toLowerCase(),
+    displayName: name.toUpperCase(),
+    value,
+  }));
   const riskTotal = riskData.reduce((s, d) => s + d.value, 0);
 
-  const callerData = Object.entries(stats?.caller_type_distribution || {}).map(([name, value]) => ({ name, value }));
+  const callerData = Object.entries(stats?.caller_type_distribution || {}).map(([name, value]) => ({
+    name: name.toLowerCase(),
+    displayName: name === 'ai' ? 'AI Bot' : name.charAt(0).toUpperCase() + name.slice(1),
+    value,
+  }));
   const callerTotal = callerData.reduce((s, d) => s + d.value, 0);
 
   const intentData = Object.entries(stats?.intent_distribution || {})
     .filter(([, v]) => v > 0)
-    .map(([name, value]) => ({ name: name.substring(0, 8), value, fullName: name }));
+    .map(([name, value], index) => ({
+      name: name.length > 10 ? `${name.substring(0, 9)}…` : name,
+      displayName: name.replace(/_/g, ' '),
+      value,
+      color: INTENT_COLORS[index % INTENT_COLORS.length],
+    }));
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -43,12 +66,12 @@ export default function DashboardCharts({ stats }: DashboardChartsProps) {
           <div className="w-full h-48">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={riskData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value">
+                <Pie data={riskData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" nameKey="displayName">
                   {riskData.map((entry) => (
                     <Cell key={entry.name} fill={RISK_COLORS[entry.name] || '#94a3b8'} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number) => [`${v} calls`, '']} />
+                <Tooltip formatter={(v: number, name: string) => [`${v} calls`, name]} />
                 <Legend iconSize={10} />
               </PieChart>
             </ResponsiveContainer>
@@ -65,12 +88,12 @@ export default function DashboardCharts({ stats }: DashboardChartsProps) {
           <div className="w-full h-48">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={callerData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value">
+                <Pie data={callerData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" nameKey="displayName">
                   {callerData.map((entry) => (
                     <Cell key={entry.name} fill={CALLER_COLORS[entry.name] || '#94a3b8'} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number) => [`${v} calls`, '']} />
+                <Tooltip formatter={(v: number, name: string) => [`${v} calls`, name]} />
                 <Legend iconSize={10} />
               </PieChart>
             </ResponsiveContainer>
@@ -86,12 +109,16 @@ export default function DashboardCharts({ stats }: DashboardChartsProps) {
         ) : (
           <div className="w-full h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={intentData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+              <BarChart data={intentData} margin={{ top: 10, right: 10, bottom: 20, left: -20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip labelFormatter={(l) => intentData.find(d => d.name === l)?.fullName || l} />
-                <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <XAxis dataKey="displayName" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" />
+                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                <Tooltip formatter={(v: number) => [`${v} calls`, 'Count']} labelFormatter={(label) => `Intent: ${label}`} />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  {intentData.map((entry, idx) => (
+                    <Cell key={`cell-${idx}`} fill={entry.color} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
