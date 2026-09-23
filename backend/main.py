@@ -57,11 +57,16 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if "*" in settings.cors_origins else settings.cors_origins,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://callguard-dashboard.onrender.com",
+    ],
     allow_origin_regex=r"https://.*\.onrender\.com|https://.*\.vercel\.app|http://localhost(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # ---------------------------------------------------------------------------
