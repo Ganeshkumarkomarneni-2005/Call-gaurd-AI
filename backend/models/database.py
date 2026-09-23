@@ -22,14 +22,39 @@ class Base(DeclarativeBase):
     """Shared declarative base for all ORM models."""
 
 
+def _get_sync_url(raw_url: str) -> str:
+    url = raw_url
+    if "PASTE_YOUR" in url or not url:
+        return "sqlite:///./callguard_dev.db"
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif url.startswith("postgresql+asyncpg://"):
+        url = url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return url
+
+
+def _get_async_url(raw_url: str) -> str:
+    url = raw_url
+    if "PASTE_YOUR" in url or not url:
+        return "sqlite+aiosqlite:///./callguard_dev.db"
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql+psycopg2://"):
+        url = url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+
 # ---------------------------------------------------------------------------
 # Synchronous engine (used by Alembic and admin tooling)
 # ---------------------------------------------------------------------------
+sync_db_url = _get_sync_url(settings.database_url)
 sync_engine = create_engine(
-    settings.database_url,
+    sync_db_url,
     pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
     echo=settings.debug,
 )
 
@@ -43,9 +68,7 @@ SyncSession: sessionmaker[Session] = sessionmaker(
 # ---------------------------------------------------------------------------
 # Asynchronous engine (used by FastAPI request handlers)
 # ---------------------------------------------------------------------------
-async_database_url: str = settings.database_url.replace(
-    "postgresql://", "postgresql+asyncpg://"
-)
+async_database_url: str = _get_async_url(settings.database_url)
 
 async_engine = create_async_engine(
     async_database_url,
