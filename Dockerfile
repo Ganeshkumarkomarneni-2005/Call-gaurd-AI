@@ -58,12 +58,13 @@ COPY --chown=callguard:callguard alembic/ ./alembic/
 # Switch to non-root user
 USER callguard
 
-# Expose port
+# Expose ports (8000 for local docker, 10000 for Render)
 EXPOSE 8000
+EXPOSE 10000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Default command
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# Default command (respects Render's dynamic $PORT or defaults to 8000)
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
