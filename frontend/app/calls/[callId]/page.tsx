@@ -110,8 +110,8 @@ export default function CallDetailPage({ params }: PageProps) {
 
             <div className="flex items-center gap-3">
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                call.status === 'ENDED' ? 'bg-slate-500/10 text-slate-300 border border-slate-500/20'
-                : call.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 animate-pulse'
+                call.status?.toUpperCase() === 'ENDED' ? 'bg-slate-500/10 text-slate-300 border border-slate-500/20'
+                : call.status?.toUpperCase() === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 animate-pulse'
                 : 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30'
               }`}>
                 {call.status}
@@ -119,9 +119,9 @@ export default function CallDetailPage({ params }: PageProps) {
 
               {analysis && (
                 <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
-                  analysis.risk_level === 'LOW' || analysis.risk_level === 'low'
+                  String(analysis.risk_level).toUpperCase() === 'LOW'
                     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-                    : analysis.risk_level === 'MEDIUM' || analysis.risk_level === 'medium'
+                    : String(analysis.risk_level).toUpperCase() === 'MEDIUM'
                     ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
                     : 'bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.3)]'
                 }`}>
@@ -129,6 +129,7 @@ export default function CallDetailPage({ params }: PageProps) {
                 </span>
               )}
             </div>
+
           </div>
         </div>
 
