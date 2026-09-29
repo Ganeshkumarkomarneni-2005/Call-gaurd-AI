@@ -31,6 +31,29 @@
 ---
 
 
+## 📸 Visual Showcase
+
+### 1. 3D Cyber Defense Command Center
+*Live 3D telemetry dashboard featuring rotating WebGL particle shield, real-time intercept streams, and attack vector simulation.*
+![3D Cyber Defense Dashboard](docs/screenshots/dashboard_3d.png)
+
+### 2. Screened Call Intelligence & Threat Matrix (View Details)
+*Detailed call breakdown displaying multi-factor classification, policy decision rationale, structured recruitment entity extraction, and turn-by-turn confidence speech bubbles.*
+![Call Details Intelligence](docs/screenshots/call_details_intelligence.png)
+
+### 3. All Screened Calls Archive
+*Live intercepted calls table displaying real-time telephony providers, status pulses, durations, and timestamps.*
+![All Screened Calls Table](docs/screenshots/all_screened_calls.png)
+
+### 4. 3D Authentication Terminal
+*Glassmorphic security login vault with interactive 3D shield.*
+![3D Authentication Terminal](docs/screenshots/login_3d.png)
+
+### 5. Exotel Real-Time Audio Streaming Flow
+*Live telephony configuration streaming caller audio over bidirectional WebSockets (`/ws/telephony/stream`).*
+![Exotel Stream Flow](docs/screenshots/telephony_stream_flow.png)
+
+
 
 ---
 
