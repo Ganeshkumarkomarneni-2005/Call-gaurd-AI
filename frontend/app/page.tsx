@@ -383,28 +383,51 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             
             <div className="lg:col-span-8 space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-semibold uppercase tracking-wider font-mono">
-                <Radio className="w-3 h-3 animate-pulse" />
-                Active Protection Shield · 04045902896
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-semibold uppercase tracking-wider font-mono shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+                <Radio className="w-3.5 h-3.5 animate-pulse text-cyan-400" />
+                Active Protection Perimeter · 04045902896
               </div>
 
-              <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-                CALLER TYPE ≠ INTENT ≠ RISK ≠ ACTION
-              </h2>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight leading-snug">
+                  Autonomous Cognitive Call Screening &amp; <br />
+                  <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-400 bg-clip-text text-transparent">
+                    Real-Time Threat Intelligence
+                  </span>
+                </h2>
+                <p className="text-slate-300 text-xs md:text-sm mt-2 max-w-2xl leading-relaxed">
+                  CallGuard AI is a zero-trust inbound telephony defense platform. It autonomously intercepts calls in real time, converts live speech to text, verifies caller legitimacy, extracts interview schedules, and neutralizes financial scams before your phone even rings.
+                </p>
+              </div>
 
-              <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
-                Every dimension is assessed independently by 9 specialized cognitive AI agents. A legitimate AI caller is safely screened without interruption, while malicious human scammers are actively intercepted.
-              </p>
-
-              <div className="flex flex-wrap gap-4 pt-2">
-                <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl font-mono">
-                  <Zap className="w-3.5 h-3.5" /> 100% Real-Time Voice DSP
+              {/* 4-Pillar AI Defense Architecture Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 pt-2">
+                <div className="bg-slate-950/60 border border-white/10 rounded-xl p-2.5 backdrop-blur-md">
+                  <p className="text-[10px] text-cyan-400 font-mono font-bold">01 / ACOUSTICS</p>
+                  <p className="text-xs font-semibold text-white mt-0.5">Voice Profiling</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">Human vs AI vs Robocall</p>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1.5 rounded-xl font-mono">
-                  <Shield className="w-3.5 h-3.5" /> Multi-Factor Fraud Risk Engine
+
+                <div className="bg-slate-950/60 border border-white/10 rounded-xl p-2.5 backdrop-blur-md">
+                  <p className="text-[10px] text-blue-400 font-mono font-bold">02 / NLU ENGINE</p>
+                  <p className="text-xs font-semibold text-white mt-0.5">Intent Detection</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">Recruitment vs Phishing</p>
+                </div>
+
+                <div className="bg-slate-950/60 border border-white/10 rounded-xl p-2.5 backdrop-blur-md">
+                  <p className="text-[10px] text-purple-400 font-mono font-bold">03 / RISK ENGINE</p>
+                  <p className="text-xs font-semibold text-white mt-0.5">Threat Matrix</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">OTP / Upfront Fee Extortion</p>
+                </div>
+
+                <div className="bg-slate-950/60 border border-white/10 rounded-xl p-2.5 backdrop-blur-md">
+                  <p className="text-[10px] text-emerald-400 font-mono font-bold">04 / ARBITRATION</p>
+                  <p className="text-xs font-semibold text-white mt-0.5">Smart Action</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">Screen, Transfer, or Deflect</p>
                 </div>
               </div>
             </div>
+
 
             {/* 3D Interactive Shield Visual */}
             <div className="lg:col-span-4 flex justify-center">
