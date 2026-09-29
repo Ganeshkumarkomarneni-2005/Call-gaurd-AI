@@ -6,21 +6,21 @@ import {
 } from 'recharts';
 
 const RISK_COLORS: Record<string, string> = {
-  low: '#22c55e',
-  medium: '#f59e0b',
-  high: '#ef4444',
-  critical: '#dc2626',
+  low: '#10b981',      // neon emerald
+  medium: '#f59e0b',   // neon amber
+  high: '#f43f5e',     // neon rose
+  critical: '#a855f7', // neon purple
 };
 
 const CALLER_COLORS: Record<string, string> = {
-  human: '#10b981',
-  ai: '#3b82f6',
-  robocall: '#f97316',
-  unknown: '#64748b',
+  human: '#6366f1',    // neon indigo
+  ai: '#06b6d4',       // neon cyan
+  robocall: '#f97316', // neon orange
+  unknown: '#64748b',  // slate
 };
 
 const INTENT_COLORS: string[] = [
-  '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#6366f1'
+  '#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#6366f1'
 ];
 
 interface DashboardChartsProps {
@@ -58,21 +58,28 @@ export default function DashboardCharts({ stats }: DashboardChartsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {/* Risk Distribution */}
-      <div className="card">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">Risk Distribution</h3>
+      <div className="card-glow">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Risk Matrix</h3>
+          <span className="text-[10px] text-cyan-400 font-mono">LIVE TELEMETRY</span>
+        </div>
         {riskTotal === 0 ? (
-          <div className="h-48 flex items-center justify-center text-slate-300 text-sm">No data yet</div>
+          <div className="h-48 flex items-center justify-center text-slate-500 text-xs font-mono">NO THREATS DETECTED</div>
         ) : (
           <div className="w-full h-48">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={riskData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" nameKey="displayName">
+                <Pie data={riskData} cx="50%" cy="50%" innerRadius={48} outerRadius={72} stroke="#030712" strokeWidth={2} dataKey="value" nameKey="displayName">
                   {riskData.map((entry) => (
                     <Cell key={entry.name} fill={RISK_COLORS[entry.name] || '#94a3b8'} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number, name: string) => [`${v} calls`, name]} />
-                <Legend iconSize={10} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#06b6d4', borderRadius: '12px', fontSize: '12px', color: '#fff' }}
+                  itemStyle={{ color: '#06b6d4' }}
+                  formatter={(v: number, name: string) => [`${v} calls`, name]}
+                />
+                <Legend iconSize={8} wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -80,21 +87,28 @@ export default function DashboardCharts({ stats }: DashboardChartsProps) {
       </div>
 
       {/* Caller Type Distribution */}
-      <div className="card">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">Caller Type</h3>
+      <div className="card-glow">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Caller Acoustics</h3>
+          <span className="text-[10px] text-purple-400 font-mono">VOICE DSP</span>
+        </div>
         {callerTotal === 0 ? (
-          <div className="h-48 flex items-center justify-center text-slate-300 text-sm">No data yet</div>
+          <div className="h-48 flex items-center justify-center text-slate-500 text-xs font-mono">NO ACOUSTIC SAMPLES</div>
         ) : (
           <div className="w-full h-48">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={callerData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" nameKey="displayName">
+                <Pie data={callerData} cx="50%" cy="50%" innerRadius={48} outerRadius={72} stroke="#030712" strokeWidth={2} dataKey="value" nameKey="displayName">
                   {callerData.map((entry) => (
                     <Cell key={entry.name} fill={CALLER_COLORS[entry.name] || '#94a3b8'} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number, name: string) => [`${v} calls`, name]} />
-                <Legend iconSize={10} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#8b5cf6', borderRadius: '12px', fontSize: '12px', color: '#fff' }}
+                  itemStyle={{ color: '#8b5cf6' }}
+                  formatter={(v: number, name: string) => [`${v} calls`, name]}
+                />
+                <Legend iconSize={8} wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -102,19 +116,26 @@ export default function DashboardCharts({ stats }: DashboardChartsProps) {
       </div>
 
       {/* Intent Distribution */}
-      <div className="card">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">Intent Distribution</h3>
+      <div className="card-glow">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Intent Vectors</h3>
+          <span className="text-[10px] text-emerald-400 font-mono">NLU ENGINE</span>
+        </div>
         {intentData.length === 0 ? (
-          <div className="h-48 flex items-center justify-center text-slate-300 text-sm">No data yet</div>
+          <div className="h-48 flex items-center justify-center text-slate-500 text-xs font-mono">NO INTENT DATA</div>
         ) : (
           <div className="w-full h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={intentData} margin={{ top: 10, right: 10, bottom: 20, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="displayName" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" />
-                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                <Tooltip formatter={(v: number) => [`${v} calls`, 'Count']} labelFormatter={(label) => `Intent: ${label}`} />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="displayName" tick={{ fill: '#94a3b8', fontSize: 10 }} interval={0} angle={-15} textAnchor="end" />
+                <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#10b981', borderRadius: '12px', fontSize: '12px', color: '#fff' }}
+                  formatter={(v: number) => [`${v} calls`, 'Count']}
+                  labelFormatter={(label) => `Intent: ${label}`}
+                />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {intentData.map((entry, idx) => (
                     <Cell key={`cell-${idx}`} fill={entry.color} />
                   ))}
