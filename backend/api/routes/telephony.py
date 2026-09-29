@@ -191,18 +191,24 @@ async def telephony_webhook(
     await db.commit()
     await db.refresh(new_call)
 
-    # 6. Dispatch immediate Telegram & SMS notification
-    if user_id:
+    # Find all active users to assign notifications and dashboard visibility
+    users_result = await db.execute(select(User))
+    all_users = list(users_result.scalars().all())
+    primary_user = all_users[0] if all_users else None
+    user_id = primary_user.id if primary_user else None
+
+    # 6. Dispatch immediate Telegram & SMS notification & DB notifications for all users
+    for u in all_users:
         await create_notification(
             db=db,
-            user_id=user_id,
+            user_id=u.id,
             notification_type="call_incoming",
             title="📞 Incoming Call via Exotel",
             body=f"Screened call from {caller_number} | Intent: {analysis.intent} | Risk: {analysis.risk_level.upper()}",
             call_id=new_call.id,
         )
 
-    # 7. Broadcast live WebSocket event to Dashboard
+    # 7. Broadcast live WebSocket events to Dashboard
     try:
         await ws_manager.broadcast(
             "call.started",
@@ -214,11 +220,20 @@ async def telephony_webhook(
                 "intent": analysis.intent,
             },
         )
+        await ws_manager.broadcast(
+            "notification.created",
+            {
+                "title": f"Incoming Call: {caller_number}",
+                "body": f"Intent: {analysis.intent} | Risk: {analysis.risk_level.upper()}",
+                "call_id": str(new_call.id),
+            },
+        )
     except Exception as ws_err:
         logger.warning("WS broadcast error", error=str(ws_err))
 
     # Return standard 200 OK so Exotel Passthru proceeds smoothly
     return Response(content="OK", media_type="text/plain", status_code=status.HTTP_200_OK)
+
 
 
 @router.api_route("/status", methods=["GET", "POST"], summary="Exotel Call Status & Recording Callback")

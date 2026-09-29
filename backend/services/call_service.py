@@ -100,8 +100,9 @@ async def list_calls(
     base_q = select(Call)
     count_q = select(func.count()).select_from(Call)
     if user_id is not None:
-        base_q = base_q.where(Call.user_id == user_id)
-        count_q = count_q.where(Call.user_id == user_id)
+        base_q = base_q.where((Call.user_id == user_id) | (Call.user_id.is_(None)))
+        count_q = count_q.where((Call.user_id == user_id) | (Call.user_id.is_(None)))
+
 
     total = (await db.execute(count_q)).scalar_one()
     calls = list(
