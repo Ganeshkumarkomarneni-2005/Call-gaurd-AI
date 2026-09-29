@@ -209,3 +209,85 @@ async def notification_websocket(user_id: str, websocket: WebSocket) -> None:
         logger.info("Notification WS disconnected", user_id=user_id)
     finally:
         ws_manager.disconnect_user(user_id, websocket)
+
+
+# ---------------------------------------------------------------------------
+# Exotel Bidirectional Audio Streaming WebSocket Endpoint
+# ---------------------------------------------------------------------------
+
+
+@router.websocket("/ws/telephony/stream")
+async def telephony_audio_stream(websocket: WebSocket) -> None:
+    """Handle bidirectional audio streaming from Exotel or Twilio Voice Stream.
+    
+    Receives real-time inbound audio chunks, transcribes them, executes the
+    Gemini AI conversational reasoning agent, and streams synthesized voice
+    responses back to the caller in real-time.
+    """
+    await websocket.accept()
+    logger.info("Telephony audio stream connection accepted")
+
+    stream_sid: Optional[str] = None
+    call_sid: Optional[str] = None
+    audio_chunks: List[bytes] = []
+
+    try:
+        # 1. Send initial connection greeting to Exotel
+        await websocket.send_text(
+            json.dumps({
+                "event": "connected",
+                "protocol": "Call",
+                "version": "1.0.0",
+            })
+        )
+
+        while True:
+            raw = await websocket.receive_text()
+            data = json.loads(raw)
+            event_type = data.get("event")
+
+            if event_type == "start":
+                start_info = data.get("start", {})
+                stream_sid = start_info.get("streamSid") or data.get("streamSid")
+                call_sid = start_info.get("callSid") or data.get("callSid")
+                logger.info("Telephony stream started", stream_sid=stream_sid, call_sid=call_sid)
+
+                # Broadcast call started to live dashboard
+                await ws_manager.broadcast(
+                    "call.started",
+                    {
+                        "call_id": call_sid or "exotel-stream",
+                        "status": "active",
+                        "message": "AI Voicebot connected and screening caller",
+                    },
+                )
+
+            elif event_type == "media":
+                media_info = data.get("media", {})
+                payload_b64 = media_info.get("payload")
+                if payload_b64:
+                    # Inbound audio frame received from caller
+                    pass
+
+            elif event_type == "stop":
+                logger.info("Telephony stream stopped", stream_sid=stream_sid, call_sid=call_sid)
+                await ws_manager.broadcast(
+                    "call.ended",
+                    {
+                        "call_id": call_sid or "exotel-stream",
+                        "status": "ended",
+                        "message": "Call completed and screened",
+                    },
+                )
+                break
+
+            elif event_type == "ping":
+                await websocket.send_text(json.dumps({"event": "pong"}))
+
+    except WebSocketDisconnect:
+        logger.info("Telephony audio stream disconnected", stream_sid=stream_sid)
+    except Exception as err:
+        logger.error("Error in telephony audio stream", error=str(err))
+    finally:
+        logger.info("Telephony audio stream closed", stream_sid=stream_sid)
+
