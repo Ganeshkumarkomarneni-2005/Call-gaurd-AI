@@ -63,6 +63,7 @@ function RecentCallsTable({ calls }: { calls: Call[] }) {
             <th className="text-left py-3 px-2 text-slate-500 font-medium">Status</th>
             <th className="text-left py-3 px-2 text-slate-500 font-medium">Duration</th>
             <th className="text-left py-3 px-2 text-slate-500 font-medium">Time</th>
+            <th className="text-left py-3 px-2 text-slate-500 font-medium">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -89,8 +90,17 @@ function RecentCallsTable({ calls }: { calls: Call[] }) {
               <td className="py-3 px-2 text-slate-400 text-xs">
                 {formatRelativeTime(call.created_at)}
               </td>
+              <td className="py-3 px-2">
+                <Link
+                  href={`/calls/${call.id}`}
+                  className="text-blue-600 hover:text-blue-800 font-medium text-xs flex items-center gap-1"
+                >
+                  View Details →
+                </Link>
+              </td>
             </tr>
           ))}
+
         </tbody>
       </table>
     </div>
