@@ -30,16 +30,7 @@
 
 ---
 
-## 📸 Visual Showcase
 
-### 1. 3D Cyber Defense Command Center
-![3D Cyber Defense Dashboard](docs/screenshots/dashboard_3d.png)
-
-### 2. 3D Authentication Terminal
-![3D Authentication Terminal](docs/screenshots/login_3d.png)
-
-### 3. Exotel Telephony Real-Time Audio Streaming Flow
-![Exotel Stream Flow](docs/screenshots/telephony_stream_flow.png)
 
 ---
 
