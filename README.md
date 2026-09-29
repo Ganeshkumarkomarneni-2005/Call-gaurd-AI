@@ -25,7 +25,7 @@
 | :--- | :--- | :--- |
 | 🛡️ **3D Web Command Center** | [callguard-dashboard.onrender.com](https://callguard-dashboard.onrender.com) | Interactive 3D Cyber Defense dashboard with live telemetry. |
 | ⚙️ **Backend API & Swagger** | [call-gaurd-ai.onrender.com/docs](https://call-gaurd-ai.onrender.com/docs) | FastAPI asynchronous REST & WebSocket backend. |
-| 📞 **Live Telephony Number** | `+91 04045902896` / `+91 9513886363` | Exotel Virtual Numbers configured with CallGuard AI. |
+| 📞 **Live Telephony Number** | `+91 04045902896` | Exotel Virtual Numbers configured with CallGuard AI. |
 | 🤖 **Telegram Alert Bot** | `@callguard_ganesh_bot` | Real-time push notifications for screened calls. |
 
 ---
