@@ -178,13 +178,14 @@ export default function LoginPage() {
                   <div className="pt-2 border-t border-emerald-500/20">
                     <p className="text-[11px] text-emerald-400 mb-1">Direct Reset Link:</p>
                     <a
-                      href={devResetLink}
+                      href={devResetLink.includes('token=') ? `/reset-password?token=${devResetLink.split('token=')[1]}` : devResetLink}
                       className="inline-block bg-emerald-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-emerald-500 transition-colors"
                     >
                       Set New Password →
                     </a>
                   </div>
                 )}
+
               </div>
             )}
 
