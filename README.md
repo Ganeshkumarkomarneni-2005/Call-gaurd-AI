@@ -49,9 +49,7 @@
 *Glassmorphic security login vault with interactive 3D shield.*
 ![3D Authentication Terminal](docs/screenshots/login_3d.png)
 
-### 5. Exotel Real-Time Audio Streaming Flow
-*Live telephony configuration streaming caller audio over bidirectional WebSockets (`/ws/telephony/stream`).*
-![Exotel Stream Flow](docs/screenshots/telephony_stream_flow.png)
+
 
 
 
